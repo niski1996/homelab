@@ -1,0 +1,30 @@
+# Ignore build artifacts
+bin/
+obj/
+out/
+
+# Ignore user-specific files
+*.user
+*.suo
+
+# Ignore IDE files
+.vscode/
+.vs/
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.swp
+*~
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore test results
+TestResults/
+
+# Ignore packages
+*.nupkg

@@ -12,8 +12,39 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - gym_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gym_user -d homelab_gym"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build: ./HomeLabGymApi
+    container_name: homelab_gym_api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5008
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=homelab_gym;Username=gym_user;Password=gym_password
+    ports:
+      - "5008:5008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gym_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5008/api/exercises"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  gym_network:
+    driver: bridge
