@@ -1,0 +1,325 @@
+@page "/gym"
+@inject GymApiService ApiService
+
+<PageTitle>Dashboard - HomeLab Gym</PageTitle>
+
+<div class="mb-4">
+    <h1 class="h3 mb-0">
+        <span class="oi oi-dashboard me-2"></span>
+        Dashboard Gym
+    </h1>
+    <p class="text-muted">Przegląd Twoich treningów i postępów</p>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+        </div>
+        <p class="mt-2">Ładowanie danych...</p>
+    </div>
+}
+else
+{
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Ćwiczenia</h6>
+                            <h2 class="mb-0">@exerciseCount</h2>
+                        </div>
+                        <span class="oi oi-flash" style="font-size: 2rem; opacity: 0.8;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Szablony</h6>
+                            <h2 class="mb-0">@templateCount</h2>
+                        </div>
+                        <span class="oi oi-grid-three-up" style="font-size: 2rem; opacity: 0.8;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Sesje treningowe</h6>
+                            <h2 class="mb-0">@sessionCount</h2>
+                        </div>
+                        <span class="oi oi-clock" style="font-size: 2rem; opacity: 0.8;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Tagi</h6>
+                            <h2 class="mb-0">@tagCount</h2>
+                        </div>
+                        <span class="oi oi-tags" style="font-size: 2rem; opacity: 0.8;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <span class="oi oi-cog me-2"></span>
+                        Szybkie akcje
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <a href="/exercises" class="btn btn-primary w-100">
+                                <span class="oi oi-plus me-1"></span>
+                                Dodaj ćwiczenie
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/templates" class="btn btn-success w-100">
+                                <span class="oi oi-grid-three-up me-1"></span>
+                                Nowy szablon
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-info w-100" @onclick="StartQuickWorkout">
+                                <span class="oi oi-play-circle me-1"></span>
+                                Rozpocznij trening
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/sessions" class="btn btn-outline-primary w-100">
+                                <span class="oi oi-clock me-1"></span>
+                                Historia treningów
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Data -->
+    <div class="row">
+        <!-- Recent Exercises -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <span class="oi oi-flash me-2"></span>
+                        Ostatnie ćwiczenia
+                    </h5>
+                    <a href="/exercises" class="btn btn-sm btn-outline-primary">Zobacz wszystkie</a>
+                </div>
+                <div class="card-body">
+                    @if (recentExercises.Any())
+                    {
+                        @foreach (var exercise in recentExercises)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>@exercise.Name</strong>
+                                    <div class="text-muted small">@exercise.Category</div>
+                                </div>
+                                <span class="badge bg-secondary">@exercise.ExerciseType</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Brak ćwiczeń. <a href="/exercises">Dodaj pierwsze ćwiczenie</a></p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Tags -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <span class="oi oi-tags me-2"></span>
+                        Popularne tagi
+                    </h5>
+                    <a href="/exercises" class="btn btn-sm btn-outline-primary">Zarządzaj</a>
+                </div>
+                <div class="card-body">
+                    @if (popularTags.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var tag in popularTags)
+                            {
+                                <span class="badge bg-light text-dark">
+                                    #@tag.Name
+                                    <small class="text-muted ms-1">(@tag.UsageCount)</small>
+                                </span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Brak tagów. Dodaj tagi do ćwiczeń.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exercise Categories -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <span class="oi oi-grid-four-up me-2"></span>
+                        Podział ćwiczeń według kategorii
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (exercisesByCategory.Any())
+                    {
+                        <div class="row">
+                            @foreach (var category in exercisesByCategory)
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="p-3 border rounded">
+                                        <h6 class="mb-2">@GetCategoryDisplayName(category.Key)</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted">@category.Value ćwiczeń</span>
+                                            <div class="progress flex-grow-1 ms-3" style="height: 6px;">
+                                                <div class="progress-bar" style="width: @((double)category.Value / exerciseCount * 100)%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Brak danych o kategoriach ćwiczeń.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    
+    // Statistics
+    private int exerciseCount = 0;
+    private int templateCount = 0;
+    private int sessionCount = 0;
+    private int tagCount = 0;
+    
+    // Recent data
+    private List<ExerciseDto> recentExercises = new();
+    private List<TagWithUsageDto> popularTags = new();
+    private Dictionary<string, int> exercisesByCategory = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        try
+        {
+            // Load exercises and tags
+            var exercises = await ApiService.GetExercisesAsync();
+            var tags = await ApiService.GetTagsAsync();
+            
+            // Calculate statistics
+            exerciseCount = exercises.Count;
+            tagCount = tags.Count;
+            templateCount = 0; // TODO: implement when templates API is ready
+            sessionCount = 0; // TODO: implement when sessions API is ready
+            
+            // Recent exercises (last 5)
+            recentExercises = exercises
+                .OrderBy(e => e.Name)
+                .Take(5)
+                .ToList();
+            
+            // Popular tags with usage count
+            popularTags = tags
+                .Select(t => new TagWithUsageDto
+                {
+                    Name = t.Name,
+                    UsageCount = exercises.SelectMany(e => e.Tags).Count(et => et.Name == t.Name)
+                })
+                .OrderByDescending(t => t.UsageCount)
+                .Take(10)
+                .ToList();
+            
+            // Exercises by category
+            exercisesByCategory = exercises
+                .Where(e => !string.IsNullOrEmpty(e.Category))
+                .GroupBy(e => e.Category)
+                .ToDictionary(g => g.Key, g => g.Count());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void StartQuickWorkout()
+    {
+        // TODO: Implement quick workout start
+        // For now, navigate to templates or sessions
+    }
+
+    private string GetCategoryDisplayName(string category)
+    {
+        return category switch
+        {
+            "chest" => "Klatka piersiowa",
+            "back" => "Plecy",
+            "shoulders" => "Ramiona",
+            "legs" => "Nogi",
+            "arms" => "Ręce",
+            "core" => "Brzuch",
+            _ => category
+        };
+    }
+    
+    // Helper DTO for tags with usage count
+    public class TagWithUsageDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public int UsageCount { get; set; }
+    }
+}

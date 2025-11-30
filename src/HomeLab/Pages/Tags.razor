@@ -1,0 +1,424 @@
+@page "/tags"
+@inject GymApiService ApiService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Tagi - HomeLab Gym</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <span class="oi oi-tags me-2"></span>
+        Tagi
+    </h1>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">
+        <span class="oi oi-plus me-1"></span>
+        Nowy Tag
+    </button>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label">Szukaj tagów:</label>
+                <input type="text" class="form-control" @bind="searchFilter" @oninput="FilterTags" 
+                       placeholder="Wpisz nazwę tagu..." />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Sortuj według:</label>
+                <select class="form-select" @bind="sortBy" @bind:after="SortTags">
+                    <option value="name">Nazwy (A-Z)</option>
+                    <option value="usage">Wykorzystania</option>
+                    <option value="created">Daty utworzenia</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+        </div>
+        <p class="mt-2">Ładowanie tagów...</p>
+    </div>
+}
+else if (!filteredTags.Any())
+{
+    <div class="text-center py-5">
+        <div class="text-muted">
+            <span class="oi oi-tags" style="font-size: 3rem;"></span>
+            <h4 class="mt-3">Brak tagów</h4>
+            <p>Utwórz pierwsze tagi, aby lepiej organizować ćwiczenia.</p>
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <span class="oi oi-plus me-1"></span>
+                Utwórz pierwszy tag
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Tag Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">@tags.Count</h4>
+                    <small class="text-muted">Wszystkich tagów</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">@(mostUsedTag?.Value ?? 0)</h4>
+                    <small class="text-muted">Najpopularniejszy: @(mostUsedTag?.Key ?? "Brak")</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">@averageUsage.ToString("F1")</h4>
+                    <small class="text-muted">Średnie wykorzystanie</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">@unusedTags</h4>
+                    <small class="text-muted">Nieużywanych tagów</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Lista tagów (@filteredTags.Count)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nazwa</th>
+                            <th>Opis</th>
+                            <th class="text-center">Wykorzystanie</th>
+                            <th class="text-center">Utworzony</th>
+                            <th class="text-center">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tag in filteredTags)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary me-2">#@tag.Name</span>
+                                    @if (tag.Color != null)
+                                    {
+                                        <span class="badge" style="background-color: @tag.Color; color: white;">●</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        @(string.IsNullOrEmpty(tag.Description) ? "Brak opisu" : tag.Description)
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">@GetTagUsageCount(tag.Name)</span>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">@tag.CreatedAt.ToString("dd.MM.yyyy")</small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary" @onclick="() => EditTag(tag)">
+                                            <span class="oi oi-pencil"></span>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" @onclick="() => ViewTagUsages(tag)">
+                                            <span class="oi oi-eye"></span>
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => DeleteTag(tag)">
+                                            <span class="oi oi-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Create/Edit Tag Modal -->
+@if (showModal)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(isEditMode ? "Edytuj Tag" : "Nowy Tag")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nazwa tagu*</label>
+                        <input type="text" @bind="tagForm.Name" class="form-control" 
+                               placeholder="np. push, compound, barbell" />
+                        <small class="form-text text-muted">Nazwa powinna być krótka i opisowa</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Opis</label>
+                        <textarea @bind="tagForm.Description" class="form-control" rows="3" 
+                                  placeholder="Opcjonalny opis zastosowania tagu..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kolor (opcjonalnie)</label>
+                        <div class="d-flex align-items-center">
+                            <input type="color" @bind="tagForm.Color" class="form-control form-control-color me-2" 
+                                   style="width: 3rem; height: 3rem;" />
+                            <small class="text-muted">Kolor pomoże w wizualnym rozpoznawaniu tagu</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Anuluj</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveTag">
+                        @(isEditMode ? "Zapisz zmiany" : "Utwórz tag")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Tag Usages Modal -->
+@if (showUsagesModal)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Wykorzystanie tagu: <span class="badge bg-primary">#@selectedTag?.Name</span>
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseUsagesModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (tagExercises.Any())
+                    {
+                        <p class="text-muted mb-3">Tag jest używany w @tagExercises.Count ćwiczeniach:</p>
+                        <div class="list-group">
+                            @foreach (var exercise in tagExercises)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@exercise.Name</strong>
+                                        <br><small class="text-muted">@exercise.Category - @exercise.ExerciseType</small>
+                                    </div>
+                                    <a href="/exercises" class="btn btn-sm btn-outline-primary">Edytuj</a>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-4">
+                            Tag nie jest używany w żadnym ćwiczeniu.
+                        </p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseUsagesModal">Zamknij</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<TagDto> tags = new();
+    private List<TagDto> filteredTags = new();
+    private List<ExerciseDto> exercises = new();
+    private bool isLoading = true;
+    
+    // Filtering and sorting
+    private string searchFilter = "";
+    private string sortBy = "name";
+    
+    // Statistics
+    private KeyValuePair<string, int>? mostUsedTag;
+    private double averageUsage;
+    private int unusedTags;
+    
+    // Modals
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool showUsagesModal = false;
+    private CreateTagDto tagForm = new();
+    private Guid? editingTagId;
+    private TagDto? selectedTag;
+    private List<ExerciseDto> tagExercises = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            tags = await ApiService.GetTagsAsync();
+            exercises = await ApiService.GetExercisesAsync();
+            filteredTags = tags;
+            
+            CalculateStatistics();
+            await SortTags();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Error loading data:", ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void CalculateStatistics()
+    {
+        var tagUsages = tags.ToDictionary(t => t.Name, t => GetTagUsageCount(t.Name));
+        
+        mostUsedTag = tagUsages.Any() ? tagUsages.OrderByDescending(kvp => kvp.Value).First() : null;
+        averageUsage = tagUsages.Any() ? tagUsages.Values.Average() : 0;
+        unusedTags = tagUsages.Count(kvp => kvp.Value == 0);
+    }
+
+    private int GetTagUsageCount(string tagName)
+    {
+        return exercises.SelectMany(e => e.Tags).Count(t => t.Name == tagName);
+    }
+
+    private async Task FilterTags()
+    {
+        await Task.Delay(1); // Force async
+        filteredTags = tags.Where(t =>
+            string.IsNullOrEmpty(searchFilter) || 
+            t.Name.Contains(searchFilter, StringComparison.OrdinalIgnoreCase) ||
+            (t.Description?.Contains(searchFilter, StringComparison.OrdinalIgnoreCase) ?? false)
+        ).ToList();
+        
+        await SortTags();
+    }
+
+    private async Task SortTags()
+    {
+        await Task.Delay(1); // Force async
+        filteredTags = sortBy switch
+        {
+            "usage" => filteredTags.OrderByDescending(t => GetTagUsageCount(t.Name)).ToList(),
+            "created" => filteredTags.OrderByDescending(t => t.CreatedAt).ToList(),
+            _ => filteredTags.OrderBy(t => t.Name).ToList()
+        };
+    }
+
+    private void ShowCreateModal()
+    {
+        isEditMode = false;
+        tagForm = new CreateTagDto();
+        showModal = true;
+    }
+
+    private void EditTag(TagDto tag)
+    {
+        isEditMode = true;
+        editingTagId = tag.Id;
+        tagForm = new CreateTagDto
+        {
+            Name = tag.Name,
+            Description = tag.Description,
+            Color = tag.Color
+        };
+        showModal = true;
+    }
+
+    private async Task SaveTag()
+    {
+        try
+        {
+            if (isEditMode && editingTagId.HasValue)
+            {
+                var updateDto = new UpdateTagDto
+                {
+                    Name = tagForm.Name,
+                    Description = tagForm.Description,
+                    Color = tagForm.Color
+                };
+                await ApiService.UpdateTagAsync(editingTagId.Value, updateDto);
+            }
+            else
+            {
+                await ApiService.CreateTagAsync(tagForm);
+            }
+            
+            CloseModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Błąd: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteTag(TagDto tag)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Czy na pewno chcesz usunąć tag '{tag.Name}'?\n\nTag zostanie usunięty ze wszystkich ćwiczeń, w których jest używany.");
+        
+        if (confirmed)
+        {
+            try
+            {
+                await ApiService.DeleteTagAsync(tag.Id);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Błąd podczas usuwania: {ex.Message}");
+            }
+        }
+    }
+
+    private void ViewTagUsages(TagDto tag)
+    {
+        selectedTag = tag;
+        tagExercises = exercises.Where(e => e.Tags.Any(t => t.Name == tag.Name)).ToList();
+        showUsagesModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        tagForm = new CreateTagDto();
+        editingTagId = null;
+    }
+
+    private void CloseUsagesModal()
+    {
+        showUsagesModal = false;
+        selectedTag = null;
+        tagExercises.Clear();
+    }
+}
