@@ -10,6 +10,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 
+// Add Radzen services
+builder.Services.AddRadzenComponents();
+
 // Add HTTP client for API communication
 builder.Services.AddHttpClient<GymApiService>(client =>
 {

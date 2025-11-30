@@ -1,6 +1,8 @@
 @page "/exercises"
 @inject GymApiService ApiService
 @inject IJSRuntime JSRuntime
+@using Radzen
+@using Radzen.Blazor
 
 <PageTitle>Ćwiczenia - HomeLab Gym</PageTitle>
 
@@ -16,38 +18,24 @@
 </div>
 
 <!-- Filtering -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Nazwa:</label>
-                <input type="text" class="form-control" @bind="nameFilter" @oninput="FilterExercises" placeholder="Szukaj po nazwie..." />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Kategoria:</label>
-                <select class="form-select" @bind="categoryFilter" @bind:after="FilterExercises">
-                    <option value="">Wszystkie kategorie</option>
-                    <option value="chest">Klatka piersiowa</option>
-                    <option value="back">Plecy</option>
-                    <option value="shoulders">Ramiona</option>
-                    <option value="legs">Nogi</option>
-                    <option value="arms">Ręce</option>
-                    <option value="core">Brzuch</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Tagi:</label>
-                <select class="form-select" @bind="selectedTag" @bind:after="FilterExercises">
-                    <option value="">Wszystkie tagi</option>
-                    @foreach (var tag in tags)
-                    {
-                        <option value="@tag.Name">@tag.Name</option>
-                    }
-                </select>
-            </div>
-        </div>
-    </div>
-</div>
+<RadzenCard class="mb-4">
+    <RadzenRow Gap="1rem">
+        <RadzenColumn Size="12" SizeMD="4">
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.Label">Nazwa:</RadzenText>
+            <RadzenTextBox @bind-Value="nameFilter" @oninput="FilterExercises" Placeholder="Szukaj po nazwie..." Style="width: 100%" />
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="4">
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.Label">Kategoria:</RadzenText>
+            <RadzenDropDown @bind-Value="categoryFilter" Change="FilterExercises" Data="@categoryOptions" 
+                           TextProperty="Text" ValueProperty="Value" Placeholder="Wszystkie kategorie" Style="width: 100%" />
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="4">
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.Label">Tagi:</RadzenText>
+            <RadzenDropDown @bind-Value="selectedTag" Change="FilterExercises" Data="@tagOptions" 
+                           TextProperty="Text" ValueProperty="Value" Placeholder="Wszystkie tagi" Style="width: 100%" />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenCard>
 
 @if (isLoading)
 {
